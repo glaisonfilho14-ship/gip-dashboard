@@ -1,6 +1,9 @@
 import { Redis } from "@upstash/redis";
 
-const redis = Redis.fromEnv();
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
+});
 
 const CHAVE_TOKEN = "gip:bearer-token";
 const CHAVE_ATUALIZADO_EM = "gip:token-atualizado-em";
