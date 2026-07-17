@@ -40,13 +40,29 @@ export type DadosTurma = {
   enrollments: Enrollment[];
 };
 
+export type AulaDoDia = {
+  id: string;
+  class_id: string;
+  start_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
+  attendance_given: boolean;
+  plan: unknown | null;
+};
+
+export type AulasDoDiaResponse = {
+  totalItems: number;
+  items: AulaDoDia[];
+};
+
 export class GipError extends Error {
   constructor(public status: number, message: string) {
     super(message);
   }
 }
 
-export async function buscarTurma(turmaId: string): Promise<DadosTurma> {
+async function chamarApiGip(path: string): Promise<Response> {
   const token = await obterToken();
 
   if (!token) {
@@ -55,7 +71,7 @@ export async function buscarTurma(turmaId: string): Promise<DadosTurma> {
 
   const bearer = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
 
-  const res = await fetch(`https://lms-production-api.alicerceedu.com/class/${turmaId}`, {
+  const res = await fetch(`https://lms-production-api.alicerceedu.com${path}`, {
     headers: {
       Authorization: bearer,
       Origin: "https://gip.eduquest.dev",
@@ -74,11 +90,27 @@ export async function buscarTurma(turmaId: string): Promise<DadosTurma> {
 
   if (!res.ok) {
     const corpo = await res.text().catch(() => "");
-    throw new GipError(
-      res.status,
-      `Erro ao buscar turma: ${res.status} ${corpo.slice(0, 300)}`,
-    );
+    throw new GipError(res.status, `Erro na API do GIP: ${res.status} ${corpo.slice(0, 300)}`);
   }
 
+  return res;
+}
+
+export async function buscarTurma(turmaId: string): Promise<DadosTurma> {
+  const res = await chamarApiGip(`/class/${turmaId}`);
+  return res.json();
+}
+
+export function hojeNoBrasil(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+}
+
+export async function buscarAulasDoDia(
+  turmaId: string,
+  data: string,
+): Promise<AulasDoDiaResponse> {
+  const res = await chamarApiGip(
+    `/daily-class?order=dc.start_time&size=9999&class_id=${turmaId}&date=${data}`,
+  );
   return res.json();
 }

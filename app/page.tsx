@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { DadosTurma, Aluno } from "@/lib/gip";
+import type { DadosTurma, Aluno, AulaDoDia } from "@/lib/gip";
 
 const ESCOLAS = [
   {
@@ -26,6 +26,7 @@ export default function Home() {
   const [escolaIndex, setEscolaIndex] = useState(0);
   const [turmaId, setTurmaId] = useState(ESCOLAS[0].turmas[0]);
   const [dados, setDados] = useState<DadosTurma | null>(null);
+  const [aulas, setAulas] = useState<AulaDoDia[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
 
@@ -33,12 +34,23 @@ export default function Home() {
     setCarregando(true);
     setErro(null);
     setDados(null);
+    setAulas(null);
 
-    fetch(`/api/gip/turma/${turmaId}`)
-      .then(async (res) => {
+    Promise.all([
+      fetch(`/api/gip/turma/${turmaId}`).then(async (res) => {
         const json = await res.json();
-        if (!res.ok) throw new Error(json.erro || "Erro ao carregar");
-        setDados(json);
+        if (!res.ok) throw new Error(json.erro || "Erro ao carregar turma");
+        return json as DadosTurma;
+      }),
+      fetch(`/api/gip/aulas-do-dia/${turmaId}`).then(async (res) => {
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.erro || "Erro ao carregar aulas do dia");
+        return json.items as AulaDoDia[];
+      }),
+    ])
+      .then(([turma, aulasDoDia]) => {
+        setDados(turma);
+        setAulas(aulasDoDia);
       })
       .catch((e) => setErro(e.message))
       .finally(() => setCarregando(false));
@@ -102,6 +114,48 @@ export default function Home() {
             <div className="mt-2 flex gap-4 text-sm text-neutral-500">
               <span>{alunos.length} alunos</span>
               <span>{dados.teachers.length} professores</span>
+            </div>
+
+            <div className="mt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Status de hoje
+              </h3>
+              {!aulas || aulas.length === 0 ? (
+                <p className="mt-2 text-sm text-neutral-500">
+                  Nenhuma aula prevista para hoje.
+                </p>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  {aulas.map((aula) => (
+                    <div
+                      key={aula.id}
+                      className="flex flex-wrap items-center gap-2 rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-inset ring-white/10"
+                    >
+                      <span className="text-sm text-neutral-300">
+                        {aula.start_time.slice(0, 5)}–{aula.end_time.slice(0, 5)}
+                      </span>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          aula.attendance_given
+                            ? "bg-emerald-500/15 text-emerald-300"
+                            : "bg-red-500/15 text-red-300"
+                        }`}
+                      >
+                        {aula.attendance_given ? "Chamada feita" : "Chamada pendente"}
+                      </span>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          aula.plan
+                            ? "bg-emerald-500/15 text-emerald-300"
+                            : "bg-red-500/15 text-red-300"
+                        }`}
+                      >
+                        {aula.plan ? "Planejamento feito" : "Planejamento pendente"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {dados.teachers.length > 0 && (
