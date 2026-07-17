@@ -7,10 +7,11 @@ export type TrilhaAluno = {
   trail_id: number;
   block_name: string;
   level_name: string;
+  trail_name: string;
 };
 
-export type AlunoTurma = {
-  id: number;
+export type Aluno = {
+  id: string;
   name: string;
   age_group: string | null;
   school_grade: string | null;
@@ -18,12 +19,25 @@ export type AlunoTurma = {
   completed_trails: TrilhaAluno[];
 };
 
+export type Enrollment = {
+  id: string;
+  student: Aluno;
+};
+
+export type Professor = {
+  id: string;
+  name: string;
+  status: string;
+};
+
 export type DadosTurma = {
   id: number;
   name: string;
   type: string;
   start_date: string;
-  students: AlunoTurma[];
+  expected_students: string;
+  teachers: Professor[];
+  enrollments: Enrollment[];
 };
 
 export class GipError extends Error {

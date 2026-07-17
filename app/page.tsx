@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { DadosTurma } from "@/lib/gip";
+import type { DadosTurma, Aluno } from "@/lib/gip";
 
 const ESCOLAS = [
   {
@@ -14,7 +14,7 @@ const ESCOLAS = [
   },
 ];
 
-function resumoAluno(aluno: DadosTurma["students"][number]) {
+function resumoAluno(aluno: Aluno) {
   const total = aluno.completed_trails.length;
   const concluidas = aluno.completed_trails.filter(
     (t) => t.status === "completed",
@@ -45,6 +45,7 @@ export default function Home() {
   }, [turmaId]);
 
   const escola = ESCOLAS[escolaIndex];
+  const alunos = dados?.enrollments.map((e) => e.student) ?? [];
 
   return (
     <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 py-8">
@@ -97,25 +98,50 @@ export default function Home() {
         {dados && (
           <div>
             <h2 className="text-xl font-semibold text-white">{dados.name}</h2>
-            <p className="text-sm text-neutral-500">
-              {dados.students.length} alunos
-            </p>
 
-            <div className="mt-4 divide-y divide-white/10 rounded-xl ring-1 ring-inset ring-white/10">
-              {dados.students.map((aluno) => {
-                const { total, concluidas } = resumoAluno(aluno);
-                return (
-                  <div
-                    key={aluno.id}
-                    className="flex items-center justify-between gap-3 px-4 py-3"
-                  >
-                    <span className="text-sm text-neutral-200">{aluno.name}</span>
-                    <span className="shrink-0 rounded-full bg-white/5 px-2.5 py-1 text-xs font-medium text-neutral-400">
-                      {concluidas}/{total} trilhas
+            <div className="mt-2 flex gap-4 text-sm text-neutral-500">
+              <span>{alunos.length} alunos</span>
+              <span>{dados.teachers.length} professores</span>
+            </div>
+
+            {dados.teachers.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Professores
+                </h3>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {dados.teachers.map((prof) => (
+                    <span
+                      key={prof.id}
+                      className="rounded-lg bg-sky-500/10 px-3 py-1.5 text-sm text-sky-300 ring-1 ring-inset ring-sky-500/25"
+                    >
+                      {prof.name}
                     </span>
-                  </div>
-                );
-              })}
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Alunos
+              </h3>
+              <div className="mt-2 divide-y divide-white/10 rounded-xl ring-1 ring-inset ring-white/10">
+                {alunos.map((aluno) => {
+                  const { total, concluidas } = resumoAluno(aluno);
+                  return (
+                    <div
+                      key={aluno.id}
+                      className="flex items-center justify-between gap-3 px-4 py-3"
+                    >
+                      <span className="text-sm text-neutral-200">{aluno.name}</span>
+                      <span className="shrink-0 rounded-full bg-white/5 px-2.5 py-1 text-xs font-medium text-neutral-400">
+                        {concluidas}/{total} trilhas
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
