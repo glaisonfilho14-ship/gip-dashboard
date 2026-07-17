@@ -114,3 +114,30 @@ export async function buscarAulasDoDia(
   );
   return res.json();
 }
+
+export type DiaDoMes = {
+  data: string;
+  aulas: AulaDoDia[];
+};
+
+export async function buscarAulasDoMes(
+  turmaId: string,
+  ano: number,
+  mes: number,
+): Promise<DiaDoMes[]> {
+  const diasNoMes = new Date(ano, mes, 0).getDate();
+  const datas = Array.from(
+    { length: diasNoMes },
+    (_, i) => `${ano}-${String(mes).padStart(2, "0")}-${String(i + 1).padStart(2, "0")}`,
+  );
+
+  const resultados = await Promise.all(
+    datas.map((data) =>
+      buscarAulasDoDia(turmaId, data).catch(() => ({ totalItems: 0, items: [] })),
+    ),
+  );
+
+  return datas
+    .map((data, i) => ({ data, aulas: resultados[i].items }))
+    .filter((dia) => dia.aulas.length > 0);
+}
