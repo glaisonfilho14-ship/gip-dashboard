@@ -39,8 +39,14 @@ export async function buscarTurma(turmaId: string): Promise<DadosTurma> {
     throw new GipError(401, "Nenhum token configurado. Acesse /admin para configurar.");
   }
 
+  const bearer = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+
   const res = await fetch(`https://lms-production-api.alicerceedu.com/class/${turmaId}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: bearer,
+      Origin: "https://gip.eduquest.dev",
+      Referer: "https://gip.eduquest.dev/",
+    },
     cache: "no-store",
   });
 
@@ -49,7 +55,11 @@ export async function buscarTurma(turmaId: string): Promise<DadosTurma> {
   }
 
   if (!res.ok) {
-    throw new GipError(res.status, `Erro ao buscar turma: ${res.status}`);
+    const corpo = await res.text().catch(() => "");
+    throw new GipError(
+      res.status,
+      `Erro ao buscar turma: ${res.status} ${corpo.slice(0, 300)}`,
+    );
   }
 
   return res.json();
