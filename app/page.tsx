@@ -1,11 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { DadosTurma, Aluno, DiaDoMes } from "@/lib/gip";
+import type { DadosTurma, Aluno, DiaDoMes, Periodo } from "@/lib/gip";
 
 function formatarDiaMes(data: string) {
   const [, mes, dia] = data.split("-");
   return `${dia}/${mes}`;
+}
+
+function formatarDataCurta(iso: string) {
+  const [ano, mes, dia] = iso.slice(0, 10).split("-");
+  return `${dia}/${mes}/${ano.slice(2)}`;
+}
+
+function periodoAtual(periodo: Periodo) {
+  const hoje = new Date();
+  const inicio = new Date(periodo.start_date);
+  const fim = new Date(periodo.end_date);
+  return hoje >= inicio && hoje <= fim;
 }
 
 const ESCOLAS = [
@@ -32,6 +44,7 @@ export default function Home() {
   const [turmaId, setTurmaId] = useState(ESCOLAS[0].turmas[0]);
   const [dados, setDados] = useState<DadosTurma | null>(null);
   const [diasDoMes, setDiasDoMes] = useState<DiaDoMes[] | null>(null);
+  const [periodos, setPeriodos] = useState<Periodo[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [somentePendentes, setSomentePendentes] = useState(false);
@@ -41,6 +54,7 @@ export default function Home() {
     setErro(null);
     setDados(null);
     setDiasDoMes(null);
+    setPeriodos(null);
 
     Promise.all([
       fetch(`/api/gip/turma/${turmaId}`).then(async (res) => {
@@ -53,10 +67,16 @@ export default function Home() {
         if (!res.ok) throw new Error(json.erro || "Erro ao carregar o mês");
         return json.dias as DiaDoMes[];
       }),
+      fetch(`/api/gip/periodos/${turmaId}`).then(async (res) => {
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.erro || "Erro ao carregar planejamento");
+        return (json.items?.sprint?.periods ?? []) as Periodo[];
+      }),
     ])
-      .then(([turma, dias]) => {
+      .then(([turma, dias, periodosDoSprint]) => {
         setDados(turma);
         setDiasDoMes(dias);
+        setPeriodos(periodosDoSprint);
       })
       .catch((e) => setErro(e.message))
       .finally(() => setCarregando(false));
@@ -69,10 +89,11 @@ export default function Home() {
     dia.aulas.map((aula) => ({ data: dia.data, aula })),
   );
   const chamadasFeitas = todasAsAulas.filter((a) => a.aula.attendance_given).length;
-  const planejamentosFeitos = todasAsAulas.filter((a) => a.aula.plan).length;
   const aulasExibidas = somentePendentes
-    ? todasAsAulas.filter((a) => !a.aula.attendance_given || !a.aula.plan)
+    ? todasAsAulas.filter((a) => !a.aula.attendance_given)
     : todasAsAulas;
+
+  const periodosFeitos = (periodos ?? []).filter((p) => p.plan?.document_link).length;
 
   return (
     <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 py-8">
@@ -132,9 +153,70 @@ export default function Home() {
             </div>
 
             <div className="mt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Planejamento por período
+              </h3>
+              {!periodos || periodos.length === 0 ? (
+                <p className="mt-2 text-sm text-neutral-500">
+                  Nenhum período encontrado.
+                </p>
+              ) : (
+                <>
+                  <div className="mt-2">
+                    <span className="rounded-lg bg-white/5 px-3 py-2 text-xs text-neutral-300">
+                      <strong className="text-neutral-100">
+                        {periodosFeitos}/{periodos.length}
+                      </strong>{" "}
+                      planejamentos feitos
+                    </span>
+                  </div>
+                  <div className="mt-2 divide-y divide-white/10 rounded-xl ring-1 ring-inset ring-white/10">
+                    {periodos.map((periodo) => {
+                      const feito = Boolean(periodo.plan?.document_link);
+                      const atual = periodoAtual(periodo);
+                      return (
+                        <div
+                          key={periodo.id}
+                          className={`flex flex-wrap items-center gap-2 px-4 py-2.5 ${
+                            atual ? "bg-sky-500/[0.06]" : ""
+                          }`}
+                        >
+                          <span className="min-w-0 flex-1 text-sm text-neutral-200">
+                            {periodo.name}
+                            {atual && (
+                              <span className="ml-1.5 text-xs text-sky-400">(atual)</span>
+                            )}
+                          </span>
+                          <span className="shrink-0 text-xs text-neutral-500">
+                            {formatarDataCurta(periodo.start_date)}–
+                            {formatarDataCurta(periodo.end_date)}
+                          </span>
+                          {feito ? (
+                            <a
+                              href={periodo.plan!.document_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/25"
+                            >
+                              Feito
+                            </a>
+                          ) : (
+                            <span className="shrink-0 rounded-full bg-red-500/15 px-2.5 py-1 text-xs font-semibold text-red-300">
+                              Pendente
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="mt-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Status do mês
+                  Chamadas do mês
                 </h3>
                 {todasAsAulas.length > 0 && (
                   <button
@@ -156,18 +238,12 @@ export default function Home() {
                 </p>
               ) : (
                 <>
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-2">
                     <span className="rounded-lg bg-white/5 px-3 py-2 text-xs text-neutral-300">
                       <strong className="text-neutral-100">
                         {chamadasFeitas}/{todasAsAulas.length}
                       </strong>{" "}
-                      chamadas
-                    </span>
-                    <span className="rounded-lg bg-white/5 px-3 py-2 text-xs text-neutral-300">
-                      <strong className="text-neutral-100">
-                        {planejamentosFeitos}/{todasAsAulas.length}
-                      </strong>{" "}
-                      planejamentos
+                      chamadas feitas
                     </span>
                   </div>
 
@@ -197,15 +273,6 @@ export default function Home() {
                           >
                             {aula.attendance_given ? "Chamada feita" : "Chamada pendente"}
                           </span>
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                              aula.plan
-                                ? "bg-emerald-500/15 text-emerald-300"
-                                : "bg-red-500/15 text-red-300"
-                            }`}
-                          >
-                            {aula.plan ? "Planejamento feito" : "Planejamento pendente"}
-                          </span>
                         </div>
                       ))}
                     </div>
@@ -215,7 +282,7 @@ export default function Home() {
             </div>
 
             {dados.teachers.length > 0 && (
-              <div className="mt-4">
+              <div className="mt-6">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                   Professores
                 </h3>
@@ -232,7 +299,7 @@ export default function Home() {
               </div>
             )}
 
-            <div className="mt-4">
+            <div className="mt-6">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Alunos
               </h3>

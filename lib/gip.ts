@@ -48,7 +48,6 @@ export type AulaDoDia = {
   start_time: string;
   end_time: string;
   attendance_given: boolean;
-  plan: unknown | null;
 };
 
 export type AulasDoDiaResponse = {
@@ -140,4 +139,40 @@ export async function buscarAulasDoMes(
   return datas
     .map((data, i) => ({ data, aulas: resultados[i].items }))
     .filter((dia) => dia.aulas.length > 0);
+}
+
+export type PlanoPeriodo = {
+  id: string;
+  period_id: string;
+  class_id: string;
+  document_link: string;
+} | null;
+
+export type Periodo = {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  is_extra: boolean;
+  plan: PlanoPeriodo;
+  classes_count: number;
+};
+
+export type PeriodosResponse = {
+  items: {
+    sprint: {
+      id: string;
+      name: string;
+      start_date: string;
+      end_date: string;
+      periods: Periodo[];
+    } | null;
+    previousSprintId: string | null;
+    nextSprintId: string | null;
+  };
+};
+
+export async function buscarPeriodos(turmaId: string): Promise<PeriodosResponse> {
+  const res = await chamarApiGip(`/sprint/periods?page=0&size=10&class_id=${turmaId}`);
+  return res.json();
 }
