@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { DadosTurma, Aluno, DiaDoMes, Periodo, RegistroPresenca } from "@/lib/gip";
 
 function formatarDiaMes(data: string) {
@@ -39,6 +39,92 @@ function resumoAluno(aluno: Aluno) {
   return { total, concluidas };
 }
 
+const icones = {
+  planejamento: (
+    <svg viewBox="0 0 20 20" className="h-4 w-4 fill-none stroke-current">
+      <rect x="2.5" y="4" width="15" height="13.5" rx="2" strokeWidth="1.6" />
+      <path strokeWidth="1.6" strokeLinecap="round" d="M2.5 8h15M7 2.2v3M13 2.2v3" />
+    </svg>
+  ),
+  chamada: (
+    <svg viewBox="0 0 20 20" className="h-4 w-4 fill-none stroke-current">
+      <path
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 10.5l3.5 3.5L16 5.5"
+      />
+    </svg>
+  ),
+  alunos: (
+    <svg viewBox="0 0 20 20" className="h-4 w-4 fill-none stroke-current">
+      <circle cx="7" cy="6.5" r="2.5" strokeWidth="1.6" />
+      <path
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        d="M2 17c0-3 2.2-5 5-5s5 2 5 5"
+      />
+      <circle cx="14.5" cy="7.5" r="2" strokeWidth="1.5" />
+      <path strokeWidth="1.5" strokeLinecap="round" d="M13 17c0-2.2 1.3-4 3.5-4" />
+    </svg>
+  ),
+  professor: (
+    <svg viewBox="0 0 20 20" className="h-4 w-4 fill-none stroke-current">
+      <path
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M2.5 6.5 10 3l7.5 3.5L10 10 2.5 6.5Z"
+      />
+      <path strokeWidth="1.6" strokeLinecap="round" d="M5.5 8.3v4c0 1.5 2 2.7 4.5 2.7s4.5-1.2 4.5-2.7v-4" />
+    </svg>
+  ),
+};
+
+function Secao({
+  titulo,
+  icone,
+  acao,
+  resumo,
+  children,
+}: {
+  titulo: string;
+  icone: ReactNode;
+  acao?: ReactNode;
+  resumo?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-inset ring-white/10 sm:p-5">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+          <span className="text-neutral-400">{icone}</span>
+          {titulo}
+        </h3>
+        {acao}
+      </div>
+      {resumo && <div className="mt-3">{resumo}</div>}
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+function Contador({ feitos, total, rotulo }: { feitos: number; total: number; rotulo: string }) {
+  const completo = total > 0 && feitos === total;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${
+        completo ? "bg-emerald-500/10 text-emerald-300" : "bg-white/5 text-neutral-300"
+      }`}
+    >
+      <strong className={completo ? "text-emerald-200" : "text-neutral-100"}>
+        {feitos}/{total}
+      </strong>
+      {rotulo}
+    </span>
+  );
+}
+
 export default function Home() {
   const [escolaIndex, setEscolaIndex] = useState(0);
   const [turmaId, setTurmaId] = useState(ESCOLAS[0].turmas[0]);
@@ -48,6 +134,7 @@ export default function Home() {
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [somentePendentes, setSomentePendentes] = useState(false);
+  const [todosPeriodos, setTodosPeriodos] = useState(false);
   const [aulaExpandida, setAulaExpandida] = useState<string | null>(null);
   const [presencasPorAula, setPresencasPorAula] = useState<
     Record<string, RegistroPresenca[]>
@@ -79,6 +166,8 @@ export default function Home() {
     setPeriodos(null);
     setAulaExpandida(null);
     setPresencasPorAula({});
+    setSomentePendentes(false);
+    setTodosPeriodos(false);
 
     Promise.all([
       fetch(`/api/gip/turma/${turmaId}`).then(async (res) => {
@@ -118,10 +207,16 @@ export default function Home() {
     : todasAsAulas;
 
   const periodosFeitos = (periodos ?? []).filter((p) => p.plan?.document_link).length;
+  const periodosExibidos = todosPeriodos
+    ? periodos ?? []
+    : (periodos ?? []).filter((p) => !p.plan?.document_link || periodoAtual(p));
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 py-8">
-      <h1 className="text-lg font-semibold text-white">GIP Dashboard</h1>
+    <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 py-6 sm:py-8">
+      <header>
+        <h1 className="text-lg font-semibold text-white">GIP Dashboard</h1>
+        <p className="text-xs text-neutral-500">Acompanhamento em tempo real das turmas</p>
+      </header>
 
       <div className="mt-4 flex gap-1.5 overflow-x-auto rounded-xl bg-white/[0.03] p-1.5 ring-1 ring-inset ring-white/10">
         {ESCOLAS.map((e, i) => (
@@ -142,7 +237,7 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="mt-2 flex gap-1.5 overflow-x-auto">
+      <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
         {escola.turmas.map((id) => (
           <button
             key={id}
@@ -158,91 +253,117 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="mt-6">
-        {carregando && <p className="text-sm text-neutral-500">Carregando...</p>}
+      <div className="mt-5 flex flex-col gap-4">
+        {carregando && (
+          <div className="rounded-2xl bg-white/[0.03] p-5 text-sm text-neutral-500 ring-1 ring-inset ring-white/10">
+            Carregando...
+          </div>
+        )}
 
         {erro && (
-          <div className="rounded-xl bg-red-500/10 p-4 text-sm text-red-300 ring-1 ring-inset ring-red-500/25">
+          <div className="rounded-2xl bg-red-500/10 p-4 text-sm text-red-300 ring-1 ring-inset ring-red-500/25">
             {erro}
           </div>
         )}
 
         {dados && (
-          <div>
-            <h2 className="text-xl font-semibold text-white">{dados.name}</h2>
+          <>
+            <section className="rounded-2xl bg-gradient-to-br from-emerald-500/10 to-transparent p-4 ring-1 ring-inset ring-emerald-500/20 sm:p-5">
+              <h2 className="text-xl font-semibold text-white">{dados.name}</h2>
+              <div className="mt-2 flex flex-wrap gap-4 text-sm text-neutral-400">
+                <span className="flex items-center gap-1.5">
+                  <span className="text-neutral-500">{icones.alunos}</span>
+                  {alunos.length} alunos
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-neutral-500">{icones.professor}</span>
+                  {dados.teachers.map((p) => p.name).join(", ") || "—"}
+                </span>
+              </div>
+            </section>
 
-            <div className="mt-2 flex gap-4 text-sm text-neutral-500">
-              <span>{alunos.length} alunos</span>
-              <span>{dados.teachers.length} professores</span>
-            </div>
-
-            <div className="mt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Planejamento por período
-              </h3>
+            <Secao
+              titulo="Planejamento por período"
+              icone={icones.planejamento}
+              resumo={
+                periodos && periodos.length > 0 ? (
+                  <Contador
+                    feitos={periodosFeitos}
+                    total={periodos.length}
+                    rotulo="planejamentos feitos"
+                  />
+                ) : undefined
+              }
+              acao={
+                periodos && periodos.length > 0 ? (
+                  <button
+                    onClick={() => setTodosPeriodos((v) => !v)}
+                    className="rounded-full bg-white/5 px-3 py-1 text-xs font-semibold text-neutral-400 transition-colors hover:bg-white/10"
+                  >
+                    {todosPeriodos ? "Ver só pendentes" : "Ver todos"}
+                  </button>
+                ) : undefined
+              }
+            >
               {!periodos || periodos.length === 0 ? (
-                <p className="mt-2 text-sm text-neutral-500">
-                  Nenhum período encontrado.
-                </p>
+                <p className="text-sm text-neutral-500">Nenhum período encontrado.</p>
               ) : (
-                <>
-                  <div className="mt-2">
-                    <span className="rounded-lg bg-white/5 px-3 py-2 text-xs text-neutral-300">
-                      <strong className="text-neutral-100">
-                        {periodosFeitos}/{periodos.length}
-                      </strong>{" "}
-                      planejamentos feitos
-                    </span>
-                  </div>
-                  <div className="mt-2 divide-y divide-white/10 rounded-xl ring-1 ring-inset ring-white/10">
-                    {periodos.map((periodo) => {
-                      const feito = Boolean(periodo.plan?.document_link);
-                      const atual = periodoAtual(periodo);
-                      return (
-                        <div
-                          key={periodo.id}
-                          className={`flex flex-wrap items-center gap-2 px-4 py-2.5 ${
-                            atual ? "bg-sky-500/[0.06]" : ""
-                          }`}
-                        >
-                          <span className="min-w-0 flex-1 text-sm text-neutral-200">
-                            {periodo.name}
-                            {atual && (
-                              <span className="ml-1.5 text-xs text-sky-400">(atual)</span>
-                            )}
-                          </span>
-                          <span className="shrink-0 text-xs text-neutral-500">
-                            {formatarDataCurta(periodo.start_date)}–
-                            {formatarDataCurta(periodo.end_date)}
-                          </span>
-                          {feito ? (
-                            <a
-                              href={periodo.plan!.document_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/25"
-                            >
-                              Feito
-                            </a>
-                          ) : (
-                            <span className="shrink-0 rounded-full bg-red-500/15 px-2.5 py-1 text-xs font-semibold text-red-300">
-                              Pendente
-                            </span>
+                <div className="-mx-4 divide-y divide-white/10 sm:-mx-5">
+                  {periodosExibidos.map((periodo) => {
+                    const feito = Boolean(periodo.plan?.document_link);
+                    const atual = periodoAtual(periodo);
+                    return (
+                      <div
+                        key={periodo.id}
+                        className={`flex flex-wrap items-center gap-2 px-4 py-2.5 sm:px-5 ${
+                          atual ? "bg-sky-500/[0.06]" : ""
+                        }`}
+                      >
+                        <span className="min-w-0 flex-1 text-sm text-neutral-200">
+                          {periodo.name}
+                          {atual && (
+                            <span className="ml-1.5 text-xs text-sky-400">(atual)</span>
                           )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
+                        </span>
+                        <span className="shrink-0 text-xs text-neutral-500">
+                          {formatarDataCurta(periodo.start_date)}–
+                          {formatarDataCurta(periodo.end_date)}
+                        </span>
+                        {feito ? (
+                          <a
+                            href={periodo.plan!.document_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/25"
+                          >
+                            Feito
+                          </a>
+                        ) : (
+                          <span className="shrink-0 rounded-full bg-red-500/15 px-2.5 py-1 text-xs font-semibold text-red-300">
+                            Pendente
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-            </div>
+            </Secao>
 
-            <div className="mt-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Chamadas do mês
-                </h3>
-                {todasAsAulas.length > 0 && (
+            <Secao
+              titulo="Chamadas do mês"
+              icone={icones.chamada}
+              resumo={
+                diasDoMes && diasDoMes.length > 0 ? (
+                  <Contador
+                    feitos={chamadasFeitas}
+                    total={todasAsAulas.length}
+                    rotulo="chamadas feitas"
+                  />
+                ) : undefined
+              }
+              acao={
+                todasAsAulas.length > 0 ? (
                   <button
                     onClick={() => setSomentePendentes((v) => !v)}
                     className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
@@ -251,157 +372,115 @@ export default function Home() {
                         : "bg-white/5 text-neutral-400 hover:bg-white/10"
                     }`}
                   >
-                    {somentePendentes ? "Mostrando só pendentes" : "Mostrar só pendentes"}
+                    {somentePendentes ? "Só pendentes" : "Ver pendentes"}
                   </button>
-                )}
-              </div>
-
+                ) : undefined
+              }
+            >
               {!diasDoMes || diasDoMes.length === 0 ? (
-                <p className="mt-2 text-sm text-neutral-500">
-                  Nenhuma aula registrada neste mês.
-                </p>
+                <p className="text-sm text-neutral-500">Nenhuma aula registrada neste mês.</p>
+              ) : aulasExibidas.length === 0 ? (
+                <p className="text-sm text-neutral-500">Nada pendente esse mês 🎉</p>
               ) : (
-                <>
-                  <div className="mt-2">
-                    <span className="rounded-lg bg-white/5 px-3 py-2 text-xs text-neutral-300">
-                      <strong className="text-neutral-100">
-                        {chamadasFeitas}/{todasAsAulas.length}
-                      </strong>{" "}
-                      chamadas feitas
-                    </span>
-                  </div>
+                <div className="-mx-4 divide-y divide-white/10 sm:-mx-5">
+                  {aulasExibidas.map(({ data, aula }) => {
+                    const expandida = aulaExpandida === aula.id;
+                    const presencas = presencasPorAula[aula.id];
+                    const presentes = (presencas ?? []).filter(
+                      (p) => p.presence && p.student,
+                    );
+                    const ausentes = (presencas ?? []).filter(
+                      (p) => !p.presence && p.student,
+                    );
 
-                  {aulasExibidas.length === 0 ? (
-                    <p className="mt-2 text-sm text-neutral-500">
-                      Nada pendente esse mês 🎉
-                    </p>
-                  ) : (
-                    <div className="mt-2 divide-y divide-white/10 rounded-xl ring-1 ring-inset ring-white/10">
-                      {aulasExibidas.map(({ data, aula }) => {
-                        const expandida = aulaExpandida === aula.id;
-                        const presencas = presencasPorAula[aula.id];
-                        const presentes = (presencas ?? []).filter(
-                          (p) => p.presence && p.student,
-                        );
-                        const ausentes = (presencas ?? []).filter(
-                          (p) => !p.presence && p.student,
-                        );
+                    return (
+                      <div key={aula.id}>
+                        <button
+                          onClick={() => aula.attendance_given && alternarAula(aula.id)}
+                          disabled={!aula.attendance_given}
+                          className={`flex w-full flex-wrap items-center gap-2 px-4 py-2.5 text-left sm:px-5 ${
+                            aula.attendance_given ? "hover:bg-white/[0.03]" : ""
+                          }`}
+                        >
+                          <span className="w-12 shrink-0 text-sm font-medium text-neutral-300">
+                            {formatarDiaMes(data)}
+                          </span>
+                          <span className="w-24 shrink-0 text-xs text-neutral-500">
+                            {aula.start_time.slice(0, 5)}–{aula.end_time.slice(0, 5)}
+                          </span>
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              aula.attendance_given
+                                ? "bg-emerald-500/15 text-emerald-300"
+                                : "bg-red-500/15 text-red-300"
+                            }`}
+                          >
+                            {aula.attendance_given ? "Feita" : "Pendente"}
+                          </span>
+                          {aula.attendance_given && (
+                            <span className="ml-auto text-xs text-neutral-500">
+                              {expandida ? "▲" : "▼"}
+                            </span>
+                          )}
+                        </button>
 
-                        return (
-                          <div key={aula.id}>
-                            <button
-                              onClick={() =>
-                                aula.attendance_given && alternarAula(aula.id)
-                              }
-                              disabled={!aula.attendance_given}
-                              className={`flex w-full flex-wrap items-center gap-2 px-4 py-2 text-left ${
-                                aula.attendance_given ? "hover:bg-white/[0.03]" : ""
-                              }`}
-                            >
-                              <span className="w-12 shrink-0 text-sm font-medium text-neutral-300">
-                                {formatarDiaMes(data)}
-                              </span>
-                              <span className="w-24 shrink-0 text-xs text-neutral-500">
-                                {aula.start_time.slice(0, 5)}–{aula.end_time.slice(0, 5)}
-                              </span>
-                              <span
-                                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                  aula.attendance_given
-                                    ? "bg-emerald-500/15 text-emerald-300"
-                                    : "bg-red-500/15 text-red-300"
-                                }`}
-                              >
-                                {aula.attendance_given
-                                  ? "Chamada feita"
-                                  : "Chamada pendente"}
-                              </span>
-                              {aula.attendance_given && (
-                                <span className="ml-auto text-xs text-neutral-500">
-                                  {expandida ? "▲" : "▼"}
-                                </span>
-                              )}
-                            </button>
-
-                            {expandida && (
-                              <div className="bg-black/20 px-4 py-3">
-                                {carregandoPresenca === aula.id ? (
-                                  <p className="text-xs text-neutral-500">
-                                    Carregando presenças...
+                        {expandida && (
+                          <div className="bg-black/20 px-4 py-3 sm:px-5">
+                            {carregandoPresenca === aula.id ? (
+                              <p className="text-xs text-neutral-500">
+                                Carregando presenças...
+                              </p>
+                            ) : (
+                              <div className="flex flex-col gap-3 sm:flex-row">
+                                <div className="flex-1">
+                                  <p className="text-xs font-semibold text-emerald-400">
+                                    Presentes ({presentes.length})
                                   </p>
-                                ) : (
-                                  <div className="flex flex-col gap-3 sm:flex-row">
-                                    <div className="flex-1">
-                                      <p className="text-xs font-semibold text-emerald-400">
-                                        Presentes ({presentes.length})
-                                      </p>
-                                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                        {presentes.map((p) => (
-                                          <span
-                                            key={p.id}
-                                            className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-300"
-                                          >
-                                            {p.student!.name}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                    <div className="flex-1">
-                                      <p className="text-xs font-semibold text-red-400">
-                                        Ausentes ({ausentes.length})
-                                      </p>
-                                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                        {ausentes.map((p) => (
-                                          <span
-                                            key={p.id}
-                                            className="rounded-full bg-red-500/10 px-2.5 py-1 text-xs text-red-300"
-                                          >
-                                            {p.student!.name}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
+                                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                    {presentes.map((p) => (
+                                      <span
+                                        key={p.id}
+                                        className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-300"
+                                      >
+                                        {p.student!.name}
+                                      </span>
+                                    ))}
                                   </div>
-                                )}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-xs font-semibold text-red-400">
+                                    Ausentes ({ausentes.length})
+                                  </p>
+                                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                    {ausentes.map((p) => (
+                                      <span
+                                        key={p.id}
+                                        className="rounded-full bg-red-500/10 px-2.5 py-1 text-xs text-red-300"
+                                      >
+                                        {p.student!.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {dados.teachers.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Professores
-                </h3>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {dados.teachers.map((prof) => (
-                    <span
-                      key={prof.id}
-                      className="rounded-lg bg-sky-500/10 px-3 py-1.5 text-sm text-sky-300 ring-1 ring-inset ring-sky-500/25"
-                    >
-                      {prof.name}
-                    </span>
-                  ))}
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-            )}
+              )}
+            </Secao>
 
-            <div className="mt-6">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Alunos
-              </h3>
-              <div className="mt-2 divide-y divide-white/10 rounded-xl ring-1 ring-inset ring-white/10">
+            <Secao titulo="Alunos" icone={icones.alunos}>
+              <div className="-mx-4 divide-y divide-white/10 sm:-mx-5">
                 {alunos.map((aluno) => {
                   const { total, concluidas } = resumoAluno(aluno);
                   return (
                     <div
                       key={aluno.id}
-                      className="flex items-center justify-between gap-3 px-4 py-3"
+                      className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-5"
                     >
                       <span className="text-sm text-neutral-200">{aluno.name}</span>
                       <span className="shrink-0 rounded-full bg-white/5 px-2.5 py-1 text-xs font-medium text-neutral-400">
@@ -411,8 +490,8 @@ export default function Home() {
                   );
                 })}
               </div>
-            </div>
-          </div>
+            </Secao>
+          </>
         )}
       </div>
     </main>
