@@ -34,6 +34,7 @@ export default function Home() {
   const [diasDoMes, setDiasDoMes] = useState<DiaDoMes[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
+  const [somentePendentes, setSomentePendentes] = useState(false);
 
   useEffect(() => {
     setCarregando(true);
@@ -63,6 +64,15 @@ export default function Home() {
 
   const escola = ESCOLAS[escolaIndex];
   const alunos = dados?.enrollments.map((e) => e.student) ?? [];
+
+  const todasAsAulas = (diasDoMes ?? []).flatMap((dia) =>
+    dia.aulas.map((aula) => ({ data: dia.data, aula })),
+  );
+  const chamadasFeitas = todasAsAulas.filter((a) => a.aula.attendance_given).length;
+  const planejamentosFeitos = todasAsAulas.filter((a) => a.aula.plan).length;
+  const aulasExibidas = somentePendentes
+    ? todasAsAulas.filter((a) => !a.aula.attendance_given || !a.aula.plan)
+    : todasAsAulas;
 
   return (
     <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 py-8">
@@ -122,49 +132,85 @@ export default function Home() {
             </div>
 
             <div className="mt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Status do mês
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Status do mês
+                </h3>
+                {todasAsAulas.length > 0 && (
+                  <button
+                    onClick={() => setSomentePendentes((v) => !v)}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                      somentePendentes
+                        ? "bg-amber-500/15 text-amber-300"
+                        : "bg-white/5 text-neutral-400 hover:bg-white/10"
+                    }`}
+                  >
+                    {somentePendentes ? "Mostrando só pendentes" : "Mostrar só pendentes"}
+                  </button>
+                )}
+              </div>
+
               {!diasDoMes || diasDoMes.length === 0 ? (
                 <p className="mt-2 text-sm text-neutral-500">
                   Nenhuma aula registrada neste mês.
                 </p>
               ) : (
-                <div className="mt-2 divide-y divide-white/10 rounded-xl ring-1 ring-inset ring-white/10">
-                  {diasDoMes.map((dia) =>
-                    dia.aulas.map((aula) => (
-                      <div
-                        key={aula.id}
-                        className="flex flex-wrap items-center gap-2 px-4 py-2.5"
-                      >
-                        <span className="w-12 shrink-0 text-sm font-medium text-neutral-300">
-                          {formatarDiaMes(dia.data)}
-                        </span>
-                        <span className="text-xs text-neutral-500">
-                          {aula.start_time.slice(0, 5)}–{aula.end_time.slice(0, 5)}
-                        </span>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            aula.attendance_given
-                              ? "bg-emerald-500/15 text-emerald-300"
-                              : "bg-red-500/15 text-red-300"
-                          }`}
+                <>
+                  <div className="mt-2 flex gap-2">
+                    <span className="rounded-lg bg-white/5 px-3 py-2 text-xs text-neutral-300">
+                      <strong className="text-neutral-100">
+                        {chamadasFeitas}/{todasAsAulas.length}
+                      </strong>{" "}
+                      chamadas
+                    </span>
+                    <span className="rounded-lg bg-white/5 px-3 py-2 text-xs text-neutral-300">
+                      <strong className="text-neutral-100">
+                        {planejamentosFeitos}/{todasAsAulas.length}
+                      </strong>{" "}
+                      planejamentos
+                    </span>
+                  </div>
+
+                  {aulasExibidas.length === 0 ? (
+                    <p className="mt-2 text-sm text-neutral-500">
+                      Nada pendente esse mês 🎉
+                    </p>
+                  ) : (
+                    <div className="mt-2 divide-y divide-white/10 rounded-xl ring-1 ring-inset ring-white/10">
+                      {aulasExibidas.map(({ data, aula }) => (
+                        <div
+                          key={aula.id}
+                          className="flex flex-wrap items-center gap-2 px-4 py-2"
                         >
-                          {aula.attendance_given ? "Chamada feita" : "Chamada pendente"}
-                        </span>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            aula.plan
-                              ? "bg-emerald-500/15 text-emerald-300"
-                              : "bg-red-500/15 text-red-300"
-                          }`}
-                        >
-                          {aula.plan ? "Planejamento feito" : "Planejamento pendente"}
-                        </span>
-                      </div>
-                    )),
+                          <span className="w-12 shrink-0 text-sm font-medium text-neutral-300">
+                            {formatarDiaMes(data)}
+                          </span>
+                          <span className="w-24 shrink-0 text-xs text-neutral-500">
+                            {aula.start_time.slice(0, 5)}–{aula.end_time.slice(0, 5)}
+                          </span>
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              aula.attendance_given
+                                ? "bg-emerald-500/15 text-emerald-300"
+                                : "bg-red-500/15 text-red-300"
+                            }`}
+                          >
+                            {aula.attendance_given ? "Chamada feita" : "Chamada pendente"}
+                          </span>
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              aula.plan
+                                ? "bg-emerald-500/15 text-emerald-300"
+                                : "bg-red-500/15 text-red-300"
+                            }`}
+                          >
+                            {aula.plan ? "Planejamento feito" : "Planejamento pendente"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </div>
+                </>
               )}
             </div>
 
