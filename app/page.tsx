@@ -79,7 +79,26 @@ const icones = {
       <path strokeWidth="1.6" strokeLinecap="round" d="M5.5 8.3v4c0 1.5 2 2.7 4.5 2.7s4.5-1.2 4.5-2.7v-4" />
     </svg>
   ),
+  geral: (
+    <svg viewBox="0 0 20 20" className="h-5 w-5 fill-none stroke-current">
+      <path
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 9.5 10 3l7 6.5V17a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1V9.5Z"
+      />
+    </svg>
+  ),
 };
+
+const ABAS = [
+  { id: "geral", rotulo: "Geral", icone: icones.geral },
+  { id: "planejamento", rotulo: "Planos", icone: icones.planejamento },
+  { id: "chamadas", rotulo: "Chamadas", icone: icones.chamada },
+  { id: "alunos", rotulo: "Alunos", icone: icones.alunos },
+] as const;
+
+type AbaId = (typeof ABAS)[number]["id"];
 
 function Secao({
   titulo,
@@ -126,6 +145,7 @@ function Contador({ feitos, total, rotulo }: { feitos: number; total: number; ro
 }
 
 export default function Home() {
+  const [aba, setAba] = useState<AbaId>("geral");
   const [escolaIndex, setEscolaIndex] = useState(0);
   const [turmaId, setTurmaId] = useState(ESCOLAS[0].turmas[0]);
   const [dados, setDados] = useState<DadosTurma | null>(null);
@@ -212,7 +232,8 @@ export default function Home() {
     : (periodos ?? []).filter((p) => !p.plan?.document_link || periodoAtual(p));
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 py-6 sm:py-8">
+    <>
+    <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pb-24 pt-6 sm:pt-8">
       <header>
         <h1 className="text-lg font-semibold text-white">GIP Dashboard</h1>
         <p className="text-xs text-neutral-500">Acompanhamento em tempo real das turmas</p>
@@ -268,6 +289,7 @@ export default function Home() {
 
         {dados && (
           <>
+            {aba === "geral" && (
             <section className="rounded-2xl bg-gradient-to-br from-emerald-500/10 to-transparent p-4 ring-1 ring-inset ring-emerald-500/20 sm:p-5">
               <h2 className="text-xl font-semibold text-white">{dados.name}</h2>
               <div className="mt-2 flex flex-wrap gap-4 text-sm text-neutral-400">
@@ -280,8 +302,25 @@ export default function Home() {
                   {dados.teachers.map((p) => p.name).join(", ") || "—"}
                 </span>
               </div>
-            </section>
 
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-xl bg-black/20 p-3">
+                  <p className="text-xs text-neutral-400">Planejamento</p>
+                  <p className="mt-0.5 text-lg font-semibold text-white">
+                    {periodosFeitos}/{periodos?.length ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-black/20 p-3">
+                  <p className="text-xs text-neutral-400">Chamadas</p>
+                  <p className="mt-0.5 text-lg font-semibold text-white">
+                    {chamadasFeitas}/{todasAsAulas.length}
+                  </p>
+                </div>
+              </div>
+            </section>
+            )}
+
+            {aba === "planejamento" && (
             <Secao
               titulo="Planejamento por período"
               icone={icones.planejamento}
@@ -349,7 +388,9 @@ export default function Home() {
                 </div>
               )}
             </Secao>
+            )}
 
+            {aba === "chamadas" && (
             <Secao
               titulo="Chamadas do mês"
               icone={icones.chamada}
@@ -472,7 +513,9 @@ export default function Home() {
                 </div>
               )}
             </Secao>
+            )}
 
+            {aba === "alunos" && (
             <Secao titulo="Alunos" icone={icones.alunos}>
               <div className="-mx-4 divide-y divide-white/10 sm:-mx-5">
                 {alunos.map((aluno) => {
@@ -491,9 +534,28 @@ export default function Home() {
                 })}
               </div>
             </Secao>
+            )}
           </>
         )}
       </div>
     </main>
+
+    <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-white/10 bg-neutral-950/95 backdrop-blur">
+      <div className="mx-auto flex max-w-3xl">
+        {ABAS.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setAba(item.id)}
+            className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
+              aba === item.id ? "text-emerald-400" : "text-neutral-500"
+            }`}
+          >
+            {item.icone}
+            {item.rotulo}
+          </button>
+        ))}
+      </div>
+    </nav>
+    </>
   );
 }
