@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { DadosTurma, Aluno, DiaDoMes, Periodo } from "@/lib/gip";
+import type { DadosTurma, Aluno, DiaDoMes, Periodo, RegistroPresenca } from "@/lib/gip";
 
 function formatarDiaMes(data: string) {
   const [, mes, dia] = data.split("-");
@@ -48,6 +48,28 @@ export default function Home() {
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [somentePendentes, setSomentePendentes] = useState(false);
+  const [aulaExpandida, setAulaExpandida] = useState<string | null>(null);
+  const [presencasPorAula, setPresencasPorAula] = useState<
+    Record<string, RegistroPresenca[]>
+  >({});
+  const [carregandoPresenca, setCarregandoPresenca] = useState<string | null>(null);
+
+  function alternarAula(aulaId: string) {
+    if (aulaExpandida === aulaId) {
+      setAulaExpandida(null);
+      return;
+    }
+    setAulaExpandida(aulaId);
+    if (!presencasPorAula[aulaId]) {
+      setCarregandoPresenca(aulaId);
+      fetch(`/api/gip/presencas/${aulaId}`)
+        .then((res) => res.json())
+        .then((json) => {
+          setPresencasPorAula((prev) => ({ ...prev, [aulaId]: json.items ?? [] }));
+        })
+        .finally(() => setCarregandoPresenca(null));
+    }
+  }
 
   useEffect(() => {
     setCarregando(true);
@@ -55,6 +77,8 @@ export default function Home() {
     setDados(null);
     setDiasDoMes(null);
     setPeriodos(null);
+    setAulaExpandida(null);
+    setPresencasPorAula({});
 
     Promise.all([
       fetch(`/api/gip/turma/${turmaId}`).then(async (res) => {
@@ -253,28 +277,96 @@ export default function Home() {
                     </p>
                   ) : (
                     <div className="mt-2 divide-y divide-white/10 rounded-xl ring-1 ring-inset ring-white/10">
-                      {aulasExibidas.map(({ data, aula }) => (
-                        <div
-                          key={aula.id}
-                          className="flex flex-wrap items-center gap-2 px-4 py-2"
-                        >
-                          <span className="w-12 shrink-0 text-sm font-medium text-neutral-300">
-                            {formatarDiaMes(data)}
-                          </span>
-                          <span className="w-24 shrink-0 text-xs text-neutral-500">
-                            {aula.start_time.slice(0, 5)}–{aula.end_time.slice(0, 5)}
-                          </span>
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                              aula.attendance_given
-                                ? "bg-emerald-500/15 text-emerald-300"
-                                : "bg-red-500/15 text-red-300"
-                            }`}
-                          >
-                            {aula.attendance_given ? "Chamada feita" : "Chamada pendente"}
-                          </span>
-                        </div>
-                      ))}
+                      {aulasExibidas.map(({ data, aula }) => {
+                        const expandida = aulaExpandida === aula.id;
+                        const presencas = presencasPorAula[aula.id];
+                        const presentes = (presencas ?? []).filter(
+                          (p) => p.presence && p.student,
+                        );
+                        const ausentes = (presencas ?? []).filter(
+                          (p) => !p.presence && p.student,
+                        );
+
+                        return (
+                          <div key={aula.id}>
+                            <button
+                              onClick={() =>
+                                aula.attendance_given && alternarAula(aula.id)
+                              }
+                              disabled={!aula.attendance_given}
+                              className={`flex w-full flex-wrap items-center gap-2 px-4 py-2 text-left ${
+                                aula.attendance_given ? "hover:bg-white/[0.03]" : ""
+                              }`}
+                            >
+                              <span className="w-12 shrink-0 text-sm font-medium text-neutral-300">
+                                {formatarDiaMes(data)}
+                              </span>
+                              <span className="w-24 shrink-0 text-xs text-neutral-500">
+                                {aula.start_time.slice(0, 5)}–{aula.end_time.slice(0, 5)}
+                              </span>
+                              <span
+                                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                  aula.attendance_given
+                                    ? "bg-emerald-500/15 text-emerald-300"
+                                    : "bg-red-500/15 text-red-300"
+                                }`}
+                              >
+                                {aula.attendance_given
+                                  ? "Chamada feita"
+                                  : "Chamada pendente"}
+                              </span>
+                              {aula.attendance_given && (
+                                <span className="ml-auto text-xs text-neutral-500">
+                                  {expandida ? "▲" : "▼"}
+                                </span>
+                              )}
+                            </button>
+
+                            {expandida && (
+                              <div className="bg-black/20 px-4 py-3">
+                                {carregandoPresenca === aula.id ? (
+                                  <p className="text-xs text-neutral-500">
+                                    Carregando presenças...
+                                  </p>
+                                ) : (
+                                  <div className="flex flex-col gap-3 sm:flex-row">
+                                    <div className="flex-1">
+                                      <p className="text-xs font-semibold text-emerald-400">
+                                        Presentes ({presentes.length})
+                                      </p>
+                                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                        {presentes.map((p) => (
+                                          <span
+                                            key={p.id}
+                                            className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-300"
+                                          >
+                                            {p.student!.name}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-xs font-semibold text-red-400">
+                                        Ausentes ({ausentes.length})
+                                      </p>
+                                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                        {ausentes.map((p) => (
+                                          <span
+                                            key={p.id}
+                                            className="rounded-full bg-red-500/10 px-2.5 py-1 text-xs text-red-300"
+                                          >
+                                            {p.student!.name}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </>

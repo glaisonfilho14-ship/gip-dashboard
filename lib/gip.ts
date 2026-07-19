@@ -176,3 +176,22 @@ export async function buscarPeriodos(turmaId: string): Promise<PeriodosResponse>
   const res = await chamarApiGip(`/sprint/periods?page=0&size=10&class_id=${turmaId}`);
   return res.json();
 }
+
+export type RegistroPresenca = {
+  id: string;
+  student_id: string | null;
+  lms_user_id: string | null;
+  presence: boolean;
+  student: { id: string; name: string } | null;
+  lmsUser: { id: string; name: string } | null;
+};
+
+export type PresencasResponse = {
+  totalItems: number;
+  items: RegistroPresenca[];
+};
+
+export async function buscarPresencas(dailyClassId: string): Promise<PresencasResponse> {
+  const res = await chamarApiGip(`/attendance?size=9999&daily_class_id=${dailyClassId}`);
+  return res.json();
+}
