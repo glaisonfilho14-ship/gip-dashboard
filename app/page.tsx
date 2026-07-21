@@ -100,15 +100,44 @@ const ABAS = [
 
 type AbaId = (typeof ABAS)[number]["id"];
 
+const CORES = {
+  geral: {
+    icone: "text-emerald-400",
+    navAtivo: "bg-emerald-500/15 text-emerald-300",
+    contadorCheio: "bg-emerald-500/10 text-emerald-300",
+    contadorForte: "text-emerald-200",
+  },
+  planejamento: {
+    icone: "text-amber-400",
+    navAtivo: "bg-amber-500/15 text-amber-300",
+    contadorCheio: "bg-amber-500/10 text-amber-300",
+    contadorForte: "text-amber-200",
+  },
+  chamadas: {
+    icone: "text-violet-400",
+    navAtivo: "bg-violet-500/15 text-violet-300",
+    contadorCheio: "bg-violet-500/10 text-violet-300",
+    contadorForte: "text-violet-200",
+  },
+  alunos: {
+    icone: "text-teal-400",
+    navAtivo: "bg-teal-500/15 text-teal-300",
+    contadorCheio: "bg-teal-500/10 text-teal-300",
+    contadorForte: "text-teal-200",
+  },
+} as const satisfies Record<AbaId, Record<string, string>>;
+
 function Secao({
   titulo,
   icone,
+  cor,
   acao,
   resumo,
   children,
 }: {
   titulo: string;
   icone: ReactNode;
+  cor: (typeof CORES)[AbaId];
   acao?: ReactNode;
   resumo?: ReactNode;
   children: ReactNode;
@@ -117,7 +146,7 @@ function Secao({
     <section className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-inset ring-white/10 sm:p-5">
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
-          <span className="text-neutral-400">{icone}</span>
+          <span className={cor.icone}>{icone}</span>
           {titulo}
         </h3>
         {acao}
@@ -128,15 +157,25 @@ function Secao({
   );
 }
 
-function Contador({ feitos, total, rotulo }: { feitos: number; total: number; rotulo: string }) {
+function Contador({
+  feitos,
+  total,
+  rotulo,
+  cor,
+}: {
+  feitos: number;
+  total: number;
+  rotulo: string;
+  cor: (typeof CORES)[AbaId];
+}) {
   const completo = total > 0 && feitos === total;
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${
-        completo ? "bg-emerald-500/10 text-emerald-300" : "bg-white/5 text-neutral-300"
+        completo ? cor.contadorCheio : "bg-white/5 text-neutral-300"
       }`}
     >
-      <strong className={completo ? "text-emerald-200" : "text-neutral-100"}>
+      <strong className={completo ? cor.contadorForte : "text-neutral-100"}>
         {feitos}/{total}
       </strong>
       {rotulo}
@@ -294,7 +333,7 @@ export default function Home() {
               <h2 className="text-xl font-semibold text-white">{dados.name}</h2>
               <div className="mt-2 flex flex-wrap gap-4 text-sm text-neutral-400">
                 <span className="flex items-center gap-1.5">
-                  <span className="text-neutral-500">{icones.alunos}</span>
+                  <span className={CORES.alunos.icone}>{icones.alunos}</span>
                   {alunos.length} alunos
                 </span>
                 <span className="flex items-center gap-1.5">
@@ -304,18 +343,28 @@ export default function Home() {
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-black/20 p-3">
-                  <p className="text-xs text-neutral-400">Planejamento</p>
+                <button
+                  onClick={() => setAba("planejamento")}
+                  className="rounded-xl bg-amber-500/10 p-3 text-left ring-1 ring-inset ring-amber-500/15 transition-colors hover:bg-amber-500/15"
+                >
+                  <p className="flex items-center gap-1.5 text-xs text-amber-300">
+                    {icones.planejamento} Planejamento
+                  </p>
                   <p className="mt-0.5 text-lg font-semibold text-white">
                     {periodosFeitos}/{periodos?.length ?? 0}
                   </p>
-                </div>
-                <div className="rounded-xl bg-black/20 p-3">
-                  <p className="text-xs text-neutral-400">Chamadas</p>
+                </button>
+                <button
+                  onClick={() => setAba("chamadas")}
+                  className="rounded-xl bg-violet-500/10 p-3 text-left ring-1 ring-inset ring-violet-500/15 transition-colors hover:bg-violet-500/15"
+                >
+                  <p className="flex items-center gap-1.5 text-xs text-violet-300">
+                    {icones.chamada} Chamadas
+                  </p>
                   <p className="mt-0.5 text-lg font-semibold text-white">
                     {chamadasFeitas}/{todasAsAulas.length}
                   </p>
-                </div>
+                </button>
               </div>
             </section>
             )}
@@ -324,12 +373,14 @@ export default function Home() {
             <Secao
               titulo="Planejamento por período"
               icone={icones.planejamento}
+              cor={CORES.planejamento}
               resumo={
                 periodos && periodos.length > 0 ? (
                   <Contador
                     feitos={periodosFeitos}
                     total={periodos.length}
                     rotulo="planejamentos feitos"
+                    cor={CORES.planejamento}
                   />
                 ) : undefined
               }
@@ -394,12 +445,14 @@ export default function Home() {
             <Secao
               titulo="Chamadas do mês"
               icone={icones.chamada}
+              cor={CORES.chamadas}
               resumo={
                 diasDoMes && diasDoMes.length > 0 ? (
                   <Contador
                     feitos={chamadasFeitas}
                     total={todasAsAulas.length}
                     rotulo="chamadas feitas"
+                    cor={CORES.chamadas}
                   />
                 ) : undefined
               }
@@ -516,7 +569,7 @@ export default function Home() {
             )}
 
             {aba === "alunos" && (
-            <Secao titulo="Alunos" icone={icones.alunos}>
+            <Secao titulo="Alunos" icone={icones.alunos} cor={CORES.alunos}>
               <div className="-mx-4 divide-y divide-white/10 sm:-mx-5">
                 {alunos.map((aluno) => {
                   const { total, concluidas } = resumoAluno(aluno);
@@ -541,13 +594,13 @@ export default function Home() {
     </main>
 
     <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-white/10 bg-neutral-950/95 backdrop-blur">
-      <div className="mx-auto flex max-w-3xl">
+      <div className="mx-auto flex max-w-3xl gap-1 p-1.5">
         {ABAS.map((item) => (
           <button
             key={item.id}
             onClick={() => setAba(item.id)}
-            className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-              aba === item.id ? "text-emerald-400" : "text-neutral-500"
+            className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] font-medium transition-colors ${
+              aba === item.id ? CORES[item.id].navAtivo : "text-neutral-500 hover:bg-white/5"
             }`}
           >
             {item.icone}
