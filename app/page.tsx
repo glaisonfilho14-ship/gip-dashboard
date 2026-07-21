@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState, type ReactNode } from "react";
 import type { DadosTurma, Aluno, DiaDoMes, Periodo, RegistroPresenca } from "@/lib/gip";
 
@@ -273,15 +272,6 @@ export default function Home() {
 
   return (
     <>
-    <div className="pointer-events-none fixed inset-0 overflow-hidden">
-      <Image
-        src="/mascote.png"
-        alt=""
-        width={274}
-        height={560}
-        className="absolute -bottom-10 -right-6 w-36 opacity-[0.08] sm:w-48"
-      />
-    </div>
     <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pb-24 pt-6 sm:pt-8">
       <header>
         <h1 className="text-lg font-semibold text-white">GIP Dashboard</h1>
