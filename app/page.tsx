@@ -91,6 +91,40 @@ const icones = {
   ),
 };
 
+function DecoracaoEscolar({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 220 200"
+      className={className}
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* pilha de livros */}
+      <rect x="30" y="150" width="140" height="18" rx="3" className="stroke-amber-400" strokeWidth="3" transform="rotate(-2 100 159)" />
+      <rect x="42" y="130" width="120" height="18" rx="3" className="stroke-violet-400" strokeWidth="3" transform="rotate(2 100 139)" />
+      <rect x="36" y="110" width="128" height="18" rx="3" className="stroke-teal-400" strokeWidth="3" transform="rotate(-1.5 100 119)" />
+      {/* livro aberto em cima */}
+      <path
+        d="M60 108 L100 98 L140 108 L140 92 L100 82 L60 92 Z"
+        className="stroke-emerald-400"
+        strokeWidth="3"
+      />
+      <path d="M100 82v16" className="stroke-emerald-400" strokeWidth="3" />
+      {/* lápis */}
+      <path d="M150 60 L182 28" className="stroke-amber-400" strokeWidth="3" />
+      <path d="M182 28 L190 20 L196 26 L188 34 Z" className="stroke-amber-400" strokeWidth="3" />
+      <path d="M148 62 l4 4 6-6" className="stroke-amber-400" strokeWidth="2.4" />
+      {/* estrelinha */}
+      <path
+        d="M40 60 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3Z"
+        className="stroke-violet-400"
+        strokeWidth="2.4"
+      />
+    </svg>
+  );
+}
+
 const ABAS = [
   { id: "geral", rotulo: "Geral", icone: icones.geral },
   { id: "planejamento", rotulo: "Planos", icone: icones.planejamento },
@@ -272,6 +306,9 @@ export default function Home() {
 
   return (
     <>
+    <div className="pointer-events-none fixed inset-0 overflow-hidden">
+      <DecoracaoEscolar className="absolute -bottom-6 -right-8 w-52 opacity-[0.14] sm:w-64" />
+    </div>
     <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pb-24 pt-6 sm:pt-8">
       <header>
         <h1 className="text-lg font-semibold text-white">GIP Dashboard</h1>
